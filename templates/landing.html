@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% from '_m.html' import plan_card with context %}{% set title = 'Sell more, simply' %}
+{% block body %}
+<section class="hero"><div class="wrap hero-layout"><div class="hero-copy"><span class="pill reveal">Made for Ugandan traders</span><h1 class="reveal">Your next sale starts with <span class="grad">a better shop.</span></h1>
+<p class="lead reveal">Everything you need to launch, grow and manage your business, with simple plans and trusted local payments.</p>
+<div class="cta reveal"><a class="btn" href="/listings/new">Start selling <span aria-hidden="true">→</span></a><a class="btn ghost" href="/marketplace">Explore marketplace</a></div>
+<div class="hero-proof reveal"><span class="proof-icon" aria-hidden="true">✓</span><span>Easy setup</span><span class="proof-dot">·</span><span>MTN &amp; Airtel Money</span><span class="proof-dot">·</span><span>Secure checkout</span></div></div>
+<div class="hero-visual reveal"><img src="{{ url_for('static', filename='market-hero.svg') }}" alt="Illustration of a Ugandan shop owner managing products and sales from a phone">
+<div class="float-note sales-note"><span class="note-icon">↗</span><span><b>Business made simpler</b><small>Your shop, all in one place</small></span></div>
+<div class="float-note mobile-note"><span class="note-icon">UGX</span><span><b>Local payments</b><small>Made for your customers</small></span></div></div></div></section>
+<section class="wrap category-showcase"><div class="section-heading"><div><span class="eyebrow">THE MARKETPLACE</span><h2>Find your next favourite thing</h2></div><a class="text-link" href="/marketplace">Browse everything <span aria-hidden="true">→</span></a></div>
+<div class="category-grid">{% for key, item in {'shoes':('Shoes','Made for every step'), 'clothes':('Clothes','Style your way'), 'cars':('Cars','Find your next ride'), 'electronics':('Electronics','Power your everyday')}.items() %}
+<a class="category-card category-{{ key }}" href="{{ url_for('marketplace', category=key) }}"><span class="category-art" aria-hidden="true">{{ {'shoes':'👟','clothes':'👕','cars':'🚗','electronics':'📱'}[key] }}</span><span><b>{{ item[0] }}</b><small>{{ item[1] }}</small></span><span class="category-arrow" aria-hidden="true">↗</span></a>{% endfor %}</div></section>
+<section id="features" class="wrap"><h2 class="reveal">Made for local buying and selling</h2><div class="grid3">
+<div class="card reveal"><div class="ico">🛍️</div><h3>Four ways to find it</h3><p class="muted">Browse shoes, clothes, cars and electronics from sellers across Uganda.</p></div>
+<div class="card reveal"><div class="ico">💬</div><h3>Talk directly</h3><p class="muted">Ask questions in a private conversation and agree details with the seller.</p></div>
+<div class="card reveal"><div class="ico">📸</div><h3>Your items, your way</h3><p class="muted">Post photos, set prices, and manage active, sold and archived listings from your dashboard.</p></div></div></section>
+<section id="pricing" class="wrap"><h2 class="reveal">Simple pricing</h2><div class="grid3">{% for p in plans %}{{ plan_card(p, loop.index0) }}{% endfor %}</div></section>
+<section id="faq" class="wrap narrow"><h2 class="reveal">FAQ</h2>
+<details class="card reveal"><summary>How do I pay?</summary><p class="muted">Pay by MTN Mobile Money, Airtel Money, Visa or Mastercard through our secure payment partner. We never see or store your card details.</p></details>
+<details class="card reveal"><summary>When does my plan start?</summary><p class="muted">Immediately after the payment provider confirms it to our server. This usually takes seconds, but can take a few minutes for mobile money.</p></details>
+<details class="card reveal"><summary>Do plans renew automatically?</summary><p class="muted">No. You renew manually from your dashboard and the new period is added after your current expiry date, so you never lose paid days.</p></details>
+<details class="card reveal"><summary>Can I get an invoice?</summary><p class="muted">Yes. Every paid order has a printable invoice in your dashboard.</p></details></section>
+{% endblock %}

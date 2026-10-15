@@ -1,0 +1,88 @@
+{% extends 'base.html' %}{% from '_m.html' import csrf with context %}{% set title = 'Marketplace administration' %}
+{% block body %}<div class="wrap"><h1>Marketplace administration</h1>
+<p><a class="btn sm" href="{{ url_for('admin_marketplace_csv') }}">Download sales and ledger CSV</a></p>
+<h2>Marketplace features</h2><div class="grid3">
+{% for key,label,enabled in [('checkout_enabled','Product checkout',checkout_enabled),('featured_listings_enabled','Featured listings',featured_enabled)] %}
+<div class="card"><b>{{ label }}</b><form method="post" action="{{ url_for('admin_marketplace_setting', key=key) }}">{{ csrf() }}
+<label><input type="checkbox" name="enabled" {{ 'checked' if enabled }}> Enabled</label><button class="btn sm">Save</button></form></div>
+{% endfor %}</div>
+<p class="muted">Seller subscription plans remain managed under Admin → Plans.</p>
+<h2>Delivery zones and UGX fees</h2><p class="muted">Only configured active zones are offered at checkout. No delivery dates are estimated.</p>
+<div class="scroll"><table><tr><th>District</th><th>Town</th><th>Fee</th><th>Active</th><th></th></tr>
+{% for zone in zones %}<tr><td>{{ zone.district }}</td><td>{{ zone.town }}</td><td>{{ zone.fee_ugx|money('UGX') }}</td><td>{{ 'Yes' if zone.active else 'No' }}</td><td>
+<form method="post" action="{{ url_for('admin_delivery_zone') }}">{{ csrf() }}<input type="hidden" name="zone_id" value="{{ zone.id }}">
+<input type="hidden" name="district" value="{{ zone.district }}"><input type="hidden" name="town" value="{{ zone.town }}">
+<input type="hidden" name="fee_ugx" value="{{ zone.fee_ugx }}"><input type="hidden" name="active" value="{{ '' if zone.active else 'on' }}">
+<button class="btn sm ghost">{{ 'Disable' if zone.active else 'Enable' }}</button></form>
+<form method="post" action="{{ url_for('admin_delivery_zone') }}">{{ csrf() }}<input type="hidden" name="zone_id" value="{{ zone.id }}">
+<input name="district" value="{{ zone.district }}" required><input name="town" value="{{ zone.town }}" required>
+<input name="fee_ugx" type="number" min="0" value="{{ zone.fee_ugx }}" required><input type="checkbox" name="active" {{ 'checked' if zone.active }}>
+<button class="btn sm">Save</button></form></td></tr>{% endfor %}
+<tr><td colspan="5"><form class="form" method="post" action="{{ url_for('admin_delivery_zone') }}">{{ csrf() }}
+<label>District<input name="district" maxlength="80" required></label><label>Town<input name="town" maxlength="100" required></label>
+<label>Fee UGX<input name="fee_ugx" type="number" min="0" required></label><label><input type="checkbox" name="active" checked> Active</label><button class="btn sm">Add zone</button></form></td></tr>
+</table></div>
+
+<h2>Commission rates</h2><p class="muted">Rates are snapshotted on new orders and posted only after eligible delivery. Default is 0%.</p>
+<div class="scroll"><table><tr><th>Scope</th><th>Rate</th><th>Active</th></tr>
+{% for rate in commissions %}<tr><td>{% if rate.seller_id %}Seller: {{ rate.seller_name }}{% elif rate.category %}{{ rate.category|category_name }}{% else %}Default{% endif %}</td><td>{{ rate.rate_percent }}%</td><td>{{ 'Yes' if rate.active else 'No' }}</td></tr>{% endfor %}
+</table></div>
+<form class="form card" method="post" action="{{ url_for('admin_commission_rate') }}">{{ csrf() }}<label>Scope<select name="category"><option value="">Default</option>
+{% for key,value in categories.items() %}<option value="{{ key }}">{{ value.label }}</option>{% endfor %}</select></label>
+<label>Seller override<select name="seller_id"><option value="">None</option>{% for seller in sellers %}<option value="{{ seller.id }}">{{ seller.name }} ({{ seller.email }})</option>{% endfor %}</select></label>
+<label>Commission percent<input name="rate_percent" type="number" min="0" max="100" step="0.01" required></label><button class="btn">Save commission policy</button></form>
+
+<h2>Tax configuration</h2><p class="muted">Tax is disabled by default. Configure only rates and scope confirmed as applicable to your business; this tool does not determine tax liability.</p>
+<div class="scroll"><table><tr><th>Scope</th><th>Rate</th><th>Includes delivery</th><th>Active</th></tr>
+{% for rate in taxes %}<tr><td>{{ rate.category|category_name if rate.category else 'Default' }}</td><td>{{ rate.rate_percent }}%</td><td>{{ 'Yes' if rate.applies_to_delivery else 'No' }}</td><td>{{ 'Yes' if rate.active else 'No' }}</td></tr>{% endfor %}</table></div>
+<form class="form card" method="post" action="{{ url_for('admin_tax_rate') }}">{{ csrf() }}<label>Scope<select name="category"><option value="">Default</option>
+{% for key,value in categories.items() %}<option value="{{ key }}">{{ value.label }}</option>{% endfor %}</select></label>
+<label>Tax percent<input name="rate_percent" type="number" min="0" max="100" step="0.01" required></label>
+<label><input type="checkbox" name="active"> Apply this configuration</label><label><input type="checkbox" name="applies_to_delivery"> Apply tax to delivery too</label>
+<button class="btn">Save tax configuration</button></form>
+
+<h2>Ledger summary</h2><div class="scroll"><table><tr><th>Ledger account</th><th>Payout status</th><th>Amount (UGX)</th><th>Entries</th></tr>
+{% for entry in ledger_summary %}<tr><td>{{ entry.entry_type.replace('_',' ')|title }}</td><td>{{ entry.payout_status|title }}</td><td>{{ entry.amount|money('UGX') }}</td><td>{{ entry.entries }}</td></tr>
+{% else %}<tr><td colspan="4" class="muted">No completed orders have ledger entries yet.</td></tr>{% endfor %}</table></div>
+
+<h2>Featured listings</h2><p class="muted">Choose listings here; featured placement remains hidden until the feature is enabled above.</p>
+<div class="scroll"><table><tr><th>Listing</th><th>Seller</th><th>Category</th><th>Featured</th></tr>
+{% for listing in featured_listings %}<tr><td>{{ listing.title }}</td><td>{{ listing.seller_name }}</td><td>{{ listing.category|category_name }}</td><td>
+<form method="post" action="{{ url_for('admin_featured_listing', listing_id=listing.id) }}">{{ csrf() }}
+<input type="checkbox" name="featured" {{ 'checked' if listing.featured }}><button class="btn sm">Save</button></form></td></tr>
+{% else %}<tr><td colspan="4" class="muted">No active listings.</td></tr>{% endfor %}</table></div>
+
+<h2>Marketplace orders and delivery assignments</h2><div class="scroll"><table>
+<tr><th>Reference</th><th>Date</th><th>Buyer / seller</th><th>Item</th><th>Total</th><th>Status</th><th>Rider / proof</th><th>Payment verification / refund</th></tr>
+{% for order in orders %}<tr><td><a href="{{ url_for('market_order_detail', reference=order.reference) }}">{{ order.reference }}</a></td>
+<td>{{ order.created_at|day }}</td><td>{{ order.buyer_name }} / {{ order.seller_name }}</td><td>{{ order.listing_title }}</td>
+<td>{{ order.total_ugx|money('UGX') }}</td><td>{{ order.status.replace('_',' ')|title }}</td>
+<td>{% if order.delivery_method == 'courier' %}<form method="post" action="{{ url_for('admin_assign_rider', reference=order.reference) }}">{{ csrf() }}
+<select name="rider_id"><option value="">Unassigned</option>{% for rider in riders %}<option value="{{ rider.id }}" {{ 'selected' if order.assigned_rider_id == rider.id }}>{{ rider.name }}</option>{% endfor %}</select>
+<button class="btn sm">Assign</button></form>{% else %}{{ order.delivery_method|title }}{% endif %}
+{% if order.proof_of_delivery %}<small>{{ order.proof_of_delivery }}</small>{% endif %}</td>
+<td>{% if order.status in ['pending_payment','payment_review'] %}<form method="post" action="{{ url_for('admin_verify_marketplace_payment', reference=order.reference) }}">{{ csrf() }}<button class="btn sm">Verify with provider</button></form>{% endif %}
+{% if order.status not in ['pending_payment','payment_review','refunded'] %}<form method="post" action="{{ url_for('admin_refund_order', reference=order.reference) }}">{{ csrf() }}
+<input name="amount_ugx" type="number" min="1" max="{{ order.total_ugx }}" placeholder="Amount UGX" required>
+<input name="provider" value="pesapal" maxlength="40" required><input name="transaction_reference" maxlength="200" placeholder="Verified refund reference" required>
+<input name="note" maxlength="500" placeholder="Reconciliation note"><button class="btn sm">Record refund</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="8" class="muted">No marketplace orders yet.</td></tr>{% endfor %}
+</table></div>
+
+<h2>Payment fee and EFRIS reconciliation</h2><div class="scroll"><table>
+<tr><th>Order</th><th>Transaction</th><th>Payment fee (UGX)</th><th>EFRIS status / reference</th></tr>
+{% for order in orders %}<tr><td>{{ order.reference }}<br><small>{{ order.payment_merchant_reference }}</small></td><td>{{ order.transaction_reference or 'Not verified' }}</td>
+<td>{% if order.paid_at %}<form method="post" action="{{ url_for('admin_payment_fee', reference=order.reference) }}">{{ csrf() }}
+<input name="fee_ugx" type="number" min="0" value="{{ order.payment_fee_ugx }}" required><input name="note" maxlength="500" placeholder="Provider statement note"><button class="btn sm">Save fee</button></form>{% else %}—{% endif %}</td>
+<td>{{ order.efris_status }} {{ order.efris_reference }}<form method="post" action="{{ url_for('admin_efris_record', reference=order.reference) }}">{{ csrf() }}
+<select name="efris_status"><option value="pending">Pending</option><option value="issued">Issued</option><option value="failed">Failed</option></select>
+<input name="efris_reference" maxlength="200" value="{{ order.efris_reference }}" placeholder="External EFRIS reference"><button class="btn sm">Save</button></form></td>
+</tr>{% else %}<tr><td colspan="4" class="muted">No orders available.</td></tr>{% endfor %}</table></div>
+
+<h2>Seller payouts</h2><div class="scroll"><table><tr><th>Seller</th><th>Order</th><th>Amount</th><th>Status</th><th>Record payout</th></tr>
+{% for payout in payouts %}
+<tr><td>{{ payout.seller_name }}</td><td>{{ payout.reference }}</td><td>{{ payout.amount_ugx|money('UGX') }}</td><td>{{ payout.payout_status }}</td><td>
+{% if payout.payout_status == 'pending' and payout.amount_ugx > 0 %}<form method="post" action="{{ url_for('admin_ledger_payout', entry_id=payout.id) }}">{{ csrf() }}
+<input name="payout_reference" maxlength="200" placeholder="External payout reference" required><button class="btn sm">Mark paid</button></form>{% else %}{{ payout.payout_reference }}{% endif %}
+</td></tr>{% else %}<tr><td colspan="5" class="muted">No seller payouts due.</td></tr>{% endfor %}
+</table></div></div>{% endblock %}

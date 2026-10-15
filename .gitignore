@@ -1,0 +1,7 @@
+.env
+.env.test
+.env.txt
+static/uploads/*
+__pycache__/
+.venv/
+*.pyc

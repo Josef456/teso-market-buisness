@@ -1,0 +1,20 @@
+{% from '_m.html' import csrf with context %}<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }} · Teso Market</title><meta name="description" content="Discover shoes, clothes, cars and electronics from sellers across Uganda on Teso Market.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%2316a34a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><script src="{{ url_for('static', filename='app.js') }}"></script></head><body>
+<header class="nav"><a class="brand" href="/">{% include '_logo.html' %}<span>Teso<b>Market</b></span></a>
+<button id="menu" class="icon" aria-label="Menu">☰</button><nav id="links">
+<a href="/marketplace">Marketplace</a>
+{% if g.user %}<a href="/listings/new">Sell an item</a><a href="/my-listings">My listings</a><a href="/orders">My orders</a>
+{% if g.user.role == 'seller' %}<a href="/seller/orders">Seller orders</a><a href="/seller/earnings">Earnings</a>{% endif %}
+{% if g.user.role == 'rider' %}<a href="/rider/deliveries">Deliveries</a>{% endif %}
+<a href="/messages">Messages{% if unread_messages %} <span class="unread-count">{{ unread_messages }}</span>{% endif %}</a>
+<a href="/notifications">Notifications{% if unread_order_notifications %} <span class="unread-count">{{ unread_order_notifications }}</span>{% endif %}</a>
+<a href="/dashboard">Dashboard</a>{% if g.user.role == 'admin' %}<a href="/admin">Admin</a><a href="/admin/marketplace">Marketplace admin</a>{% endif %}<form method="post" action="/logout">{{ csrf() }}<button class="link">Log out</button></form>
+{% else %}<a href="/#features">Features</a><a href="/login">Log in</a><a class="btn sm" href="/register">Get started</a>{% endif %}
+<button id="theme" class="icon" aria-label="Toggle dark mode">◐</button></nav></header>
+{% with m = get_flashed_messages(with_categories=true) %}{% for c, t in m %}<div class="flash {{ c }}">{{ t }}</div>{% endfor %}{% endwith %}
+<main>{% block body %}{% endblock %}</main>
+<footer><div class="wrap foot"><div><a class="brand" href="/">{% include '_logo.html' %}<span>Teso<b>Market</b></span></a><p class="muted">Sell more, simply. Built for Uganda.</p></div>
+<div><b>Marketplace</b><a href="/marketplace">Browse items</a><a href="/listings/new">Sell an item</a><a href="/messages">Messages</a></div><div><b>Account</b><a href="/login">Log in</a><a href="/register">Register</a></div>
+<div><b>Categories</b><span class="muted">Shoes · Clothes · Cars · Electronics</span></div></div><p class="copy">© 2026 Teso Market. All rights reserved.</p></footer></body></html>

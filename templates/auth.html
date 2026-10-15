@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% from '_m.html' import csrf with context %}
+{% block body %}<div class="wrap narrow"><form class="card form" method="post" action="{{ action }}"><h1>{{ title }}</h1>{{ csrf() }}
+{% for f in fields %}<label>{{ f.label }}<input name="{{ f.name }}" type="{{ f.type }}" {{ f.attrs|safe }}></label>{% endfor %}
+<button class="btn full">{{ button }}</button>{{ extra|safe }}</form></div>{% endblock %}

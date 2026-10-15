@@ -1,0 +1,49 @@
+{% extends 'base.html' %}{% from '_m.html' import csrf with context %}{% set title = 'Order ' ~ order.reference %}
+{% block body %}<section class="wrap"><a class="back-link" href="{{ url_for('customer_orders') }}">← Orders</a>
+<div class="grid3">
+<article class="card"><span class="eyebrow">TRACKING REFERENCE</span><h1>{{ order.reference }}</h1>
+<p><span class="badge {{ order.status }}">{{ order.status.replace('_',' ')|title }}</span></p>
+<h3>{{ order.listing_title }}</h3><p class="muted">Seller: {{ order.seller_name }}{% if order.buyer_id == g.user.id %} · Paid to seller through Teso Market{% endif %}</p>
+<table><tr><th>Product subtotal</th><td>{{ order.product_subtotal_ugx|money('UGX') }}</td></tr>
+<tr><th>Discount</th><td>{{ order.discount_ugx|money('UGX') }}</td></tr>
+<tr><th>Delivery</th><td>{{ order.delivery_fee_ugx|money('UGX') }}</td></tr>
+<tr><th>Tax</th><td>{{ order.tax_ugx|money('UGX') }}</td></tr>
+<tr><th>Total</th><td><strong>{{ order.total_ugx|money('UGX') }}</strong></td></tr></table>
+{% if order.buyer_id == g.user.id and order.status == 'pending_payment' and order.payment_attempt_status not in ['initiating','pending','submission_review','review'] %}
+<form method="post" action="{{ url_for('market_order_pay', reference=order.reference) }}">{{ csrf() }}<button class="btn full">Pay securely</button></form>
+<form method="post" action="{{ url_for('market_order_status', reference=order.reference) }}">{{ csrf() }}<button class="btn full ghost" name="status" value="cancelled">Cancel pending order</button></form>
+{% endif %}
+{% if order.buyer_id == g.user.id and order.status == 'pending_payment' and order.payment_attempt_status in ['pending','review'] and order.payment_tracking_id %}
+<form method="post" action="{{ url_for('market_order_verify', reference=order.reference) }}">{{ csrf() }}<button class="btn full">Check payment status with provider</button></form>
+{% endif %}
+{% if order.status == 'payment_review' %}<p class="flash err">Payment is under administrator review. Do not make another payment.</p>{% endif %}
+{% if order.payment_attempt_status == 'submission_review' %}<p class="flash err">The provider submission needs administrator reconciliation. Do not retry payment.</p>{% endif %}
+{% if order.status in ['paid','confirmed','preparing','ready_for_pickup','out_for_delivery','delivered','refunded'] %}
+<a class="btn sm" href="{{ url_for('market_order_receipt', reference=order.reference) }}">View receipt</a>
+{% endif %}
+</article>
+<article class="card"><h2>Delivery details</h2><p><b>{{ order.delivery_method.replace('_',' ')|title }}</b></p>
+<p>{{ order.recipient_name }} · {{ order.phone }}</p>
+{% if order.delivery_method != 'pickup' %}
+<p>{{ order.district }}, {{ order.town }}<br>{{ order.neighbourhood }}{% if order.landmark %}<br>Landmark: {{ order.landmark }}{% endif %}</p>
+{% if order.map_pin %}<p><a href="{{ order.map_pin }}" rel="noopener noreferrer">Open map pin</a></p>{% endif %}
+{% if order.rider_name %}<p>Assigned rider: {{ order.rider_name }}</p>{% endif %}
+{% endif %}
+{% if order.proof_of_delivery %}<p><b>Proof / confirmation:</b> {{ order.proof_of_delivery }}</p>{% endif %}
+<p class="muted">No delivery date is promised until the seller or delivery team confirms it.</p>
+</article>
+<article class="card"><h2>Status history</h2><ol>
+{% for item in history %}<li><b>{{ item.new_status.replace('_',' ')|title }}</b><br><small class="muted">{{ item.created_at|day }}{% if item.actor_name %} · {{ item.actor_name }}{% endif %}{% if item.note %}<br>{{ item.note }}{% endif %}</small></li>
+{% else %}<li class="muted">No status updates yet.</li>{% endfor %}
+</ol></article></div>
+{% set can_update = g.user.role == 'admin' or (g.user.id == order.seller_id and g.user.role == 'seller') or (g.user.id == order.assigned_rider_id and g.user.role == 'rider') %}
+{% if can_update %}
+<div class="card"><h2>Update order status</h2><form method="post" action="{{ url_for('market_order_status', reference=order.reference) }}">{{ csrf() }}
+<label>New status<select name="status" required>
+{% if g.user.id == order.seller_id or g.user.role == 'admin' %}<option value="confirmed">Confirmed</option><option value="preparing">Preparing</option><option value="ready_for_pickup">Ready for pickup</option><option value="out_for_delivery">Out for delivery</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option>{% endif %}
+{% if g.user.id == order.assigned_rider_id and g.user.role == 'rider' %}<option value="delivered">Delivered</option>{% endif %}
+</select></label>
+<label>Proof of delivery / pickup confirmation<input name="proof_of_delivery" maxlength="500" placeholder="Confirmation reference or delivery note"></label>
+<button class="btn">Save status</button></form></div>
+{% endif %}
+</section>{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% set title = 'Seller earnings' %}
+{% block body %}<div class="wrap"><h1>Seller earnings</h1><p><a class="btn sm" href="{{ url_for('seller_earnings_csv') }}">Download CSV</a></p>
+<div class="grid3">{% for item in summary %}<div class="card"><b>{{ item.payout_status|title }}</b><p class="price">{{ item.amount|money('UGX') }}</p></div>{% else %}<div class="card"><p>No completed eligible orders yet.</p></div>{% endfor %}</div>
+<h2>Completed order proceeds</h2><div class="scroll"><table><tr><th>Reference</th><th>Item</th><th>Order date</th><th>Seller proceeds</th><th>Payout status</th><th>Receipt</th></tr>
+{% for entry in entries %}<tr><td>{{ entry.reference }}</td><td>{{ entry.listing_title }}</td><td>{{ entry.order_created_at|day }}</td>
+<td>{{ entry.amount_ugx|money('UGX') }}</td><td>{{ entry.payout_status|title }}{% if entry.payout_reference %}<br><small>{{ entry.payout_reference }}</small>{% endif %}</td>
+<td><a href="{{ url_for('market_order_detail', reference=entry.reference) }}">Order</a></td></tr>
+{% else %}<tr><td colspan="6" class="muted">Seller earnings are recorded only after eligible orders are delivered.</td></tr>{% endfor %}
+</table></div></div>{% endblock %}

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% set title = heading %}
+{% block body %}<div class="wrap"><h1>{{ heading }}</h1><div class="scroll"><table>
+<tr><th>Reference</th><th>Date</th><th>Item</th><th>Status</th><th>Total</th><th></th></tr>
+{% for order in orders %}<tr>
+<td>{{ order.reference }}</td><td>{{ order.created_at|day }}</td><td>{{ order.listing_title }}</td>
+<td><span class="badge {{ order.status }}">{{ order.status.replace('_',' ')|title }}</span></td>
+<td>{{ order.total_ugx|money('UGX') }}</td><td><a href="{{ url_for('market_order_detail', reference=order.reference) }}">Details</a></td>
+</tr>{% else %}<tr><td colspan="6" class="muted">No marketplace orders yet.</td></tr>{% endfor %}
+</table></div></div>{% endblock %}

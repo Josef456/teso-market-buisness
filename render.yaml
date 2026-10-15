@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: teso-market
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python migrate.py && gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - { key: PYTHON_VERSION, value: 3.12.7 }
+      - { key: FLASK_ENV, value: production }
+      - { key: DATABASE_URL, fromDatabase: { name: teso-db, property: connectionString } }
+      - { key: SESSION_SECRET, generateValue: true }
+      - { key: IPN_SECRET, generateValue: true }
+      - { key: APP_URL, sync: false }
+      - { key: ADMIN_EMAIL, sync: false }
+      - { key: ADMIN_PASSWORD, sync: false }
+      - { key: PESAPAL_ENV, value: sandbox }
+      - { key: PESAPAL_CONSUMER_KEY, sync: false }
+      - { key: PESAPAL_CONSUMER_SECRET, sync: false }
+databases:
+  - name: teso-db
+    plan: free   # free Postgres EXPIRES; upgrade to a paid plan before going live

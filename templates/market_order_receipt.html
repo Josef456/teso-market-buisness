@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% set title = 'Receipt ' ~ order.reference %}
+{% block body %}<div class="wrap narrow"><div class="card"><span class="eyebrow">TESO MARKET</span><h1>Order receipt</h1>
+<p class="muted">Reference {{ order.reference }}<br>Status: {{ order.status.replace('_',' ')|title }}<br>Placed {{ order.created_at|day }}<br>Buyer {{ order.buyer_display_name }}<br>Seller {{ order.seller_name }}</p>
+<table><tr><th>Product</th><td>{{ order.listing_title }}</td></tr>
+<tr><th>Product subtotal</th><td>{{ order.product_subtotal_ugx|money('UGX') }}</td></tr>
+<tr><th>Discount</th><td>{{ order.discount_ugx|money('UGX') }}</td></tr>
+<tr><th>Delivery charge</th><td>{{ order.delivery_fee_ugx|money('UGX') }}</td></tr>
+<tr><th>Applicable tax</th><td>{{ order.tax_ugx|money('UGX') }}</td></tr>
+<tr><th>Total</th><td><strong>{{ order.total_ugx|money('UGX') }}</strong></td></tr></table>
+<p class="muted">Payment reference: {{ order.transaction_reference or 'Not yet confirmed' }}<br>EFRIS status: {{ order.efris_status }}{% if order.efris_reference %} · {{ order.efris_reference }}{% endif %}</p><button id="print" class="btn sm">Print receipt</button>
+</div></div>{% endblock %}

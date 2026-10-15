@@ -1,0 +1,11 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+{% macro plan_card(p, i) %}
+<div class="card plan reveal {{ 'hot' if i == 1 }}">{% if i == 1 %}<span class="tag">Most popular</span>{% endif %}
+<h3>{{ p.name }}</h3><p class="muted">{{ p.description }}</p>
+<p class="plan-limit">{{ p.listing_limit if p.listing_limit else 'Unlimited' }} active listings</p>
+<div class="price">{{ p.price_ugx|money('UGX') }}<small> / {{ 'year' if p.duration_days >= 365 else p.duration_days ~ ' days' }}</small></div>
+{% if p.price_usd %}<p class="muted">or {{ p.price_usd|money('USD') }}</p>{% endif %}
+{% if g.user %}<form method="post" action="/checkout">{{ csrf() }}<input type="hidden" name="plan" value="{{ p.id }}">
+<select name="currency" aria-label="Currency"><option>UGX</option>{% if p.price_usd %}<option>USD</option>{% endif %}</select><button class="btn full">Choose {{ p.name }}</button></form>
+{% else %}<a class="btn full" href="/register">Sign up to choose</a>{% endif %}</div>
+{% endmacro %}

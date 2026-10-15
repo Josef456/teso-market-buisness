@@ -1,0 +1,34 @@
+{% extends 'base.html' %}{% from '_m.html' import csrf with context %}{% set title = 'Checkout' %}
+{% block body %}<section class="wrap narrow"><a class="back-link" href="{{ url_for('listing_detail', listing_id=listing.id) }}">← Back to listing</a>
+<div class="card"><span class="eyebrow">SECURE CHECKOUT</span><h1>Order {{ listing.title }}</h1>
+<p class="muted">Seller: {{ listing.seller_name }} · {{ listing.price|money('UGX') }}</p>
+{% if not checkout_enabled %}<p class="flash err">Online marketplace checkout is disabled by an administrator.</p>{% elif not providers %}<p class="flash err">Online payments are not configured yet. No order or payment will be started.</p>{% endif %}
+<form class="form" method="post" action="{{ url_for('listing_checkout_create', listing_id=listing.id) }}">
+{{ csrf() }}
+<label>Recipient name<input name="recipient_name" maxlength="80" required value="{{ g.user.name }}"></label>
+<label>Phone number<input name="phone" type="tel" maxlength="20" required value="{{ g.user.phone or '' }}" placeholder="+256 7xx xxx xxx"></label>
+<label>Delivery method<select name="delivery_method" id="delivery-method" required>
+<option value="courier">Assigned courier</option><option value="seller">Seller delivery</option><option value="pickup">Customer pickup</option>
+</select></label>
+<div id="delivery-fields">
+<label>Delivery zone<select name="delivery_zone_id" id="delivery-zone" required>
+<option value="">Choose a configured delivery zone</option>
+{% for zone in zones %}<option value="{{ zone.id }}">{{ zone.district }} · {{ zone.town }} — {{ zone.fee_ugx|money('UGX') }}</option>{% endfor %}
+</select></label>
+<p class="muted">Delivery is available only in zones configured by the marketplace. No delivery date is promised until it is confirmed.</p>
+<label>District<input name="district" maxlength="80" required></label>
+<label>Town<input name="town" maxlength="100" required></label>
+<label>Village or neighbourhood<input name="neighbourhood" maxlength="120" required></label>
+<label>Landmark (optional)<input name="landmark" maxlength="200"></label>
+<label>Map pin (optional, secure link)<input name="map_pin" type="url" maxlength="500" placeholder="https://maps.google.com/..."></label>
+</div>
+{% if zones|length == 0 %}<p class="muted">No delivery zones are configured. Customer pickup remains available.</p>{% endif %}
+<div class="scroll"><table>
+<tr><th>Product subtotal</th><td>{{ listing.price|money('UGX') }}</td></tr>
+<tr><th>Discount</th><td>UGX 0</td></tr>
+<tr><th>Delivery</th><td>Calculated from the selected delivery zone</td></tr>
+<tr><th>Applicable tax</th><td>Calculated only when configured for this product category</td></tr>
+<tr><th>Total</th><td>Shown on the order review page before payment begins</td></tr>
+</table></div>
+{% if checkout_enabled and providers %}<button class="btn full">Review order and total</button>{% else %}<button class="btn full" disabled>Checkout unavailable</button>{% endif %}
+</form></div></section>{% endblock %}

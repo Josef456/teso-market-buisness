@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% set title = 'Order notifications' %}
+{% block body %}<div class="wrap narrow"><h1>Order notifications</h1><div class="grid3">
+{% for notice in notices %}<article class="card"><p>{{ notice.message }}</p><small class="muted">{{ notice.created_at|day }}</small><p><a href="{{ url_for('market_order_detail', reference=notice.reference) }}">View order →</a></p></article>
+{% else %}<p class="muted">No order notifications yet.</p>{% endfor %}
+</div></div>{% endblock %}

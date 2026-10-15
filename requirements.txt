@@ -1,0 +1,8 @@
+Flask>=3.0,<4
+Flask-WTF>=1.2,<2
+Flask-Limiter>=3.8,<4
+psycopg[binary]>=3.2,<4
+requests>=2.32,<3
+python-dotenv>=1.0,<2
+gunicorn>=22.0,<24
+pytest>=8.0,<9

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% from '_m.html' import csrf, plan_card with context %}{% set title = 'Dashboard' %}
+{% block body %}<div class="wrap"><h1>Hello, {{ g.user.name }}</h1>
+{% if g.user.role == 'seller' %}<p><a class="btn sm" href="{{ url_for('seller_orders') }}">Manage marketplace orders</a> <a class="btn sm ghost" href="{{ url_for('seller_earnings') }}">Seller earnings</a></p>{% endif %}
+<div class="grid3">
+<div class="card"><h3>Subscription</h3><span class="badge {{ state }}">{{ state }}</span>
+{% if sub %}<p>{{ sub.name }} · expires {{ sub.ends_at|day }}{% if state == 'active' %} ({{ left }} day{{ '' if left == 1 else 's' }} left){% endif %}</p>{% else %}<p class="muted">No plan yet. Choose one below.</p>{% endif %}</div>
+<div class="card"><h3>Account</h3><form method="post" action="/account">{{ csrf() }}<label>Name<input name="name" value="{{ g.user.name }}" required></label><label>Phone<input name="phone" type="tel" value="{{ g.user.phone or '' }}"></label><button class="btn sm">Save</button></form></div>
+<div class="card"><h3>Password</h3><form method="post" action="/account/password">{{ csrf() }}<label>Current password<input name="current" type="password" required></label><label>New password (min 10)<input name="password" type="password" minlength="10" required></label><button class="btn sm">Change</button></form></div></div>
+<h2>{{ 'Renew or upgrade' if state == 'active' else 'Choose a plan' }}</h2><div class="grid3">{% for p in plans %}{{ plan_card(p, loop.index0) }}{% endfor %}</div>
+<h2>Payments &amp; invoices</h2><div class="scroll"><table><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Status</th><th></th></tr>
+{% for o in orders %}<tr><td>{{ o.created_at|day }}</td><td>{{ o.plan }}</td><td>{{ o.amount|money(o.currency) }}</td><td><span class="badge {{ o.status }}">{{ o.status }}</span></td>
+<td>{% if o.status == 'paid' %}<a href="/invoice/{{ o.id }}">Invoice</a>{% elif o.status == 'pending' and o.tracking_id %}<a href="/payment/return?OrderTrackingId={{ o.tracking_id|urlencode }}">Check status</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">No payments yet.</td></tr>{% endfor %}</table></div>
+<h2>Marketplace orders</h2><div class="scroll"><table><tr><th>Reference</th><th>Item</th><th>Total</th><th>Status</th><th></th></tr>
+{% for market_order in market_orders %}<tr><td>{{ market_order.reference }}</td><td>{{ market_order.listing_title }}</td><td>{{ market_order.total_ugx|money('UGX') }}</td>
+<td>{{ market_order.status.replace('_',' ')|title }}</td><td><a href="{{ url_for('market_order_detail', reference=market_order.reference) }}">Track</a></td></tr>
+{% else %}<tr><td colspan="5" class="muted">No marketplace orders yet. <a href="/marketplace">Browse the marketplace</a>.</td></tr>{% endfor %}</table></div></div>{% endblock %}
