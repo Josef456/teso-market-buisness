@@ -80,6 +80,13 @@ def test_csrf_enforced(ctx):
     try: assert app.test_client().post("/register", data={"name": "x"}).status_code == 400
     finally: app.config["WTF_CSRF_ENABLED"] = False
 
+def test_landing_only_claims_configured_payment_methods(ctx):
+    response = ctx[0].test_client().get("/")
+    assert response.status_code == 200
+    assert b"MTN &amp; Airtel Money" not in response.data
+    assert b"Visa or Mastercard" not in response.data
+    assert b"options available to you are shown by the provider" in response.data
+
 def test_password_reset_email_uses_gmail_starttls(ctx, monkeypatch):
     import app as a
     monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
@@ -428,6 +435,12 @@ def test_marketplace_checkout_verification_delivery_ledger_and_refund(ctx, monke
     assert order["tax_ugx"] == 6000
     assert order["total_ugx"] == 131000
     assert order["commission_rate_percent"] == 10
+    queued_emails = one(
+        """SELECT count(*) AS count FROM marketplace_order_email_outbox
+           WHERE order_id=%s AND event_key IN ('order_created','new_order')""",
+        order["id"],
+    )
+    assert queued_emails["count"] == 2
     assert b"UGX 131,000" in buyer.get(response.headers["Location"]).data
     assert buyer.post(
         f"/orders/{order['reference']}/status", data={"status": "paid"}
@@ -540,3 +553,52 @@ def test_marketplace_checkout_verification_delivery_ledger_and_refund(ctx, monke
     csv_response = admin.get("/admin/marketplace.csv")
     assert csv_response.status_code == 200
     assert b"commission_ugx" in csv_response.data and order["reference"].encode() in csv_response.data
+
+    import order_email_worker
+
+    with conn() as database:
+        buyer_email = database.execute(
+            """SELECT id FROM marketplace_order_email_outbox
+               WHERE order_id=%s AND user_id=%s AND event_key='order_created'""",
+            (order["id"], buyer_id),
+        ).fetchone()["id"]
+        seller_email = database.execute(
+            """SELECT id FROM marketplace_order_email_outbox
+               WHERE order_id=%s AND user_id=%s AND event_key='new_order'""",
+            (order["id"], seller_id),
+        ).fetchone()["id"]
+        buyer_email_address = database.execute(
+            "SELECT email FROM users WHERE id=%s", (buyer_id,)
+        ).fetchone()["email"]
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USER", "seller@example.com")
+    monkeypatch.setenv("SMTP_PASS", "test-app-password")
+    monkeypatch.setenv("MAIL_FROM", "seller@example.com")
+    import order_emails
+
+    smtp = MagicMock()
+    smtp_context = MagicMock()
+    smtp_context.__enter__.return_value = smtp
+    smtp_factory = MagicMock(return_value=smtp_context)
+    monkeypatch.setattr(order_emails.smtplib, "SMTP", smtp_factory)
+    assert order_email_worker.process_one_email(buyer_email)
+    email_message = smtp.send_message.call_args.args[0]
+    assert email_message["To"] == buyer_email_address
+    assert order["reference"] in email_message.get_body().get_content()
+    delivered = one(
+        "SELECT attempts,sent_at,last_error FROM marketplace_order_email_outbox WHERE id=%s",
+        buyer_email,
+    )
+    assert delivered["attempts"] == 1 and delivered["sent_at"] is not None
+    assert delivered["last_error"] is None
+
+    smtp.send_message.side_effect = order_emails.smtplib.SMTPServerDisconnected("offline")
+    assert order_email_worker.process_one_email(seller_email)
+    retry = one(
+        "SELECT attempts,next_attempt_at,last_error,sent_at FROM marketplace_order_email_outbox WHERE id=%s",
+        seller_email,
+    )
+    assert retry["attempts"] == 1 and retry["sent_at"] is None
+    assert retry["next_attempt_at"] > datetime.now(timezone.utc)
+    assert retry["last_error"] == "SMTPServerDisconnected"

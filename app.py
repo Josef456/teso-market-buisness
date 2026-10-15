@@ -21,6 +21,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 import marketplace as market_money
 import payments, pesapal, payment_providers
+from order_emails import enqueue_order_email
 from db import conn, ex, init_app, q
 
 E = os.environ
@@ -251,6 +252,14 @@ def create_marketplace_order(buyer, listing_id, form):
                 order["id"], buyer["id"], f"Order {reference} was created and is awaiting payment.",
                 order["id"], listing["seller_id"], f"New order {reference} is awaiting payment.",
             ),
+        )
+        enqueue_order_email(
+            database, order["id"], buyer["id"], "order_created", "pending_payment",
+            f"Your order {reference} was created and is awaiting payment.",
+        )
+        enqueue_order_email(
+            database, order["id"], listing["seller_id"], "new_order", "pending_payment",
+            f"You have a new order {reference} awaiting payment.",
         )
         database.execute(
             """INSERT INTO marketplace_audit_events(actor_id,order_id,event_type,details)
@@ -879,6 +888,11 @@ def market_order_status(reference):
                     order["id"], order["seller_id"], f"Order {reference} status changed to {requested.replace('_',' ')}.",
                 ),
             )
+            for user_id in (order["buyer_id"], order["seller_id"]):
+                enqueue_order_email(
+                    database, order["id"], user_id, f"status:{requested}", requested,
+                    f"Order {reference} status changed to {requested.replace('_', ' ')}.",
+                )
             database.execute(
                 """INSERT INTO marketplace_audit_events(actor_id,order_id,event_type,details)
                    VALUES(%s,%s,'order_status_changed',%s)""",
@@ -1620,6 +1634,11 @@ def admin_refund_order(reference):
             """INSERT INTO marketplace_order_notifications(order_id,user_id,message)
                VALUES(%s,%s,%s)""",
             (order["id"], order["buyer_id"], f"A refund of UGX {amount:,} was reconciled for order {reference}."),
+        )
+        enqueue_order_email(
+            database, order["id"], order["buyer_id"], f"refund:{refund['id']}",
+            "refund_recorded",
+            f"A refund of UGX {amount:,} was reconciled for order {reference}.",
         )
     flash("Refund recorded as reconciled. The refund must already have been completed and verified with the provider.", "ok")
     return redirect(url_for("admin_marketplace"))

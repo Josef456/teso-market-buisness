@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from psycopg.types.json import Jsonb
 from db import conn
+from order_emails import enqueue_order_email
 from payment_providers import provider_for
 
 
@@ -138,6 +139,15 @@ def settle_marketplace(tracking_id):
                     f"Order {payment['reference']} payment/order status is now {next_status.replace('_',' ')}.",
                 ),
             )
+            for user_id in (payment["buyer_id"], payment["seller_id"]):
+                enqueue_order_email(
+                    database,
+                    payment["marketplace_order_id"],
+                    user_id,
+                    f"payment:{payment['id']}:{next_status}",
+                    next_status,
+                    f"Order {payment['reference']} payment/order status is now {next_status.replace('_', ' ')}.",
+                )
         elif attempt_changed and transaction_status in {"failed", "reversed"}:
             database.execute(
                 """INSERT INTO marketplace_order_notifications(order_id,user_id,message)
@@ -146,6 +156,14 @@ def settle_marketplace(tracking_id):
                     payment["marketplace_order_id"], payment["buyer_id"],
                     f"Payment for order {payment['reference']} was not completed; you may retry.",
                 ),
+            )
+            enqueue_order_email(
+                database,
+                payment["marketplace_order_id"],
+                payment["buyer_id"],
+                f"payment:{payment['id']}:{transaction_status}",
+                transaction_status,
+                f"Payment for order {payment['reference']} was not completed; you may retry.",
             )
         if order_changed or attempt_changed:
             database.execute(
